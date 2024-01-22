@@ -1,7 +1,7 @@
 use rand::distributions::{Distribution, Standard};
 use rand::Rng;
 use rayon::prelude::*;
-use std::ops::{AddAssign, Mul};
+use std::ops::{Add, AddAssign, Mul};
 
 fn multiply_single_threaded<T: Default + Copy + AddAssign + Mul<Output = T>>(
     a: Vec<Vec<T>>,
@@ -20,22 +20,18 @@ fn multiply_single_threaded<T: Default + Copy + AddAssign + Mul<Output = T>>(
     result
 }
 
-fn compute_inner_prods<T: Default + Copy + AddAssign + Mul<Output = T>>(
+fn compute_inner_prods<T: Default + Copy + Add<Output = T> + Mul<Output = T>>(
     row: &[T],
     b: &[Vec<T>],
 ) -> Vec<T> {
-    let mut result = vec![T::default(); b[0].len()];
-
-    for j in 0..b[0].len() {
-        for i in 0..b.len() {
-            result[j] += row[i] * b[i][j];
-        }
-    }
-
-    result
+    (0..b[0].len())
+        .map(|j| (0..b.len()).fold(T::default(), |acc, i| acc + row[i] * b[i][j]))
+        .collect()
 }
 
-fn multiply_multi_threaded<T: Default + Copy + AddAssign + Mul<Output = T> + Sync + Send>(
+fn multiply_multi_threaded<
+    T: Default + Copy + AddAssign + Add<Output = T> + Mul<Output = T> + Sync + Send,
+>(
     a: Vec<Vec<T>>,
     b: Vec<Vec<T>>,
 ) -> Vec<Vec<T>> {
